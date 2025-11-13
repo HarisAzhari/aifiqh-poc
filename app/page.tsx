@@ -27,6 +27,7 @@ export default function Home() {
   const [selectedFrameworks, setSelectedFrameworks] = useState<string[]>(
     frameworks.map(f => f.id) // All enabled by default
   )
+  const [isFrameworkDropdownOpen, setIsFrameworkDropdownOpen] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -158,9 +159,9 @@ export default function Home() {
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-6 py-8">
+      <div className="max-w-6xl mx-auto px-4 py-4">
         {/* Chat Messages */}
-        <div className="pb-96">
+        <div className="pb-64">
           {messages.length === 0 && !streamingContent && (
             <div className="text-center py-16">
               <div className="text-8xl mb-6">📚</div>
@@ -252,8 +253,8 @@ export default function Home() {
         </div>
 
         {/* Input Area - Fixed at bottom */}
-        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent pb-6 pt-8">
-          <div className="max-w-4xl mx-auto px-6">
+        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent pb-3 pt-4">
+          <div className="max-w-4xl mx-auto px-4">
             {error && (
               <div className="mb-4 bg-red-50 border-2 border-red-300 text-red-700 px-4 py-3 rounded-xl">
                 <p className="font-semibold">Error:</p>
@@ -263,70 +264,87 @@ export default function Home() {
 
             <form onSubmit={handleSubmit} className="relative">
               <div className="bg-white rounded-2xl shadow-2xl border-2 border-emerald-200 focus-within:border-emerald-400 transition">
-                {/* Framework Toggles */}
-                <div className="px-6 pt-4 pb-3 border-b border-gray-100">
-                  <div className="flex items-center justify-between mb-3">
-                    <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                      <span>📚</span>
-                      <span>Usuli Framework Selection</span>
-                    </label>
-                    <span className="text-xs text-gray-500">
-                      {selectedFrameworks.length} of 6 selected
-                    </span>
-                  </div>
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                    {frameworks.map((framework) => {
-                      const isSelected = selectedFrameworks.includes(framework.id)
-                      return (
-                        <button
-                          key={framework.id}
-                          type="button"
-                          onClick={() => toggleFramework(framework.id)}
-                          disabled={loading}
-                          className={`
-                            px-3 py-2 rounded-lg border-2 transition-all text-left text-xs
-                            ${isSelected 
-                              ? 'bg-emerald-50 border-emerald-500 text-emerald-800 shadow-sm' 
-                              : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300'
-                            }
-                            ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md cursor-pointer'}
-                          `}
-                        >
-                          <div className="flex items-center gap-2">
-                            <div className={`
-                              w-4 h-4 rounded border-2 flex items-center justify-center transition-all
-                              ${isSelected 
-                                ? 'bg-emerald-500 border-emerald-500' 
-                                : 'bg-white border-gray-300'
-                              }
-                            `}>
-                              {isSelected && (
-                                <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                </svg>
-                              )}
-                            </div>
-                            <div className="flex-1 min-w-0">
-                              <div className={`font-semibold truncate ${isSelected ? 'text-emerald-800' : 'text-gray-600'}`}>
-                                {framework.id}
+                {/* Framework Toggles - Dropdown */}
+                <div className="border-b border-gray-100">
+                  <button
+                    type="button"
+                    onClick={() => setIsFrameworkDropdownOpen(!isFrameworkDropdownOpen)}
+                    className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">📚</span>
+                      <span className="text-xs font-semibold text-gray-700">Usuli Framework Selection</span>
+                      <span className="text-[10px] text-gray-500 bg-emerald-50 px-2 py-0.5 rounded-full">
+                        {selectedFrameworks.length} of 6
+                      </span>
+                    </div>
+                    <svg 
+                      className={`w-4 h-4 text-gray-500 transition-transform ${isFrameworkDropdownOpen ? 'rotate-180' : ''}`}
+                      fill="none" 
+                      viewBox="0 0 24 24" 
+                      stroke="currentColor"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </button>
+                  
+                  {isFrameworkDropdownOpen && (
+                    <div className="px-4 pb-3 max-h-[30vh] overflow-y-auto">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
+                        {frameworks.map((framework) => {
+                          const isSelected = selectedFrameworks.includes(framework.id)
+                          return (
+                            <button
+                              key={framework.id}
+                              type="button"
+                              onClick={() => toggleFramework(framework.id)}
+                              disabled={loading}
+                              className={`
+                                px-2 py-1.5 rounded-md border transition-all text-left text-xs
+                                ${isSelected 
+                                  ? 'bg-emerald-50 border-emerald-500 text-emerald-800 shadow-sm' 
+                                  : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300'
+                                }
+                                ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md cursor-pointer'}
+                              `}
+                            >
+                              <div className="flex items-center gap-1.5">
+                                <div className={`
+                                  w-3 h-3 rounded border flex items-center justify-center transition-all flex-shrink-0
+                                  ${isSelected 
+                                    ? 'bg-emerald-500 border-emerald-500' 
+                                    : 'bg-white border-gray-300'
+                                  }
+                                `}>
+                                  {isSelected && (
+                                    <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                  )}
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className={`font-semibold truncate text-[11px] ${isSelected ? 'text-emerald-800' : 'text-gray-600'}`}>
+                                    {framework.id}
+                                  </div>
+                                  <div className={`text-[9px] ${isSelected ? 'text-emerald-600' : 'text-gray-400'}`}>
+                                    {framework.subtitle}
+                                  </div>
+                                </div>
                               </div>
-                              <div className={`text-[10px] ${isSelected ? 'text-emerald-600' : 'text-gray-400'}`}>
-                                {framework.subtitle}
-                              </div>
-                            </div>
-                          </div>
-                        </button>
-                      )
-                    })}
-                  </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
                 
                 <textarea
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
                   placeholder="Ask a fiqh question... (e.g., What is the ruling on digital currencies?)"
-                  className="w-full px-6 py-4 rounded-2xl resize-none focus:outline-none text-gray-800 placeholder-gray-400"
-                  rows={3}
+                  className="w-full px-4 py-3 rounded-2xl resize-none focus:outline-none text-gray-800 placeholder-gray-400 text-sm"
+                  rows={2}
                   disabled={loading}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
@@ -335,18 +353,18 @@ export default function Home() {
                     }
                   }}
                 />
-                <div className="flex items-center justify-between px-6 pb-4">
-                  <div className="text-xs text-gray-500">
-                    Press <kbd className="px-2 py-1 bg-gray-100 rounded border border-gray-300">Enter</kbd> to send, <kbd className="px-2 py-1 bg-gray-100 rounded border border-gray-300">Shift + Enter</kbd> for new line
+                <div className="flex items-center justify-between px-4 pb-3">
+                  <div className="text-[10px] text-gray-500 hidden sm:block">
+                    Press <kbd className="px-1.5 py-0.5 bg-gray-100 rounded border border-gray-300 text-[9px]">Enter</kbd> to send
                   </div>
                   <button
                     type="submit"
                     disabled={!question.trim() || loading}
-                    className="bg-emerald-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-emerald-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition shadow-lg flex items-center gap-2"
+                    className="bg-emerald-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-emerald-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition shadow-lg flex items-center gap-2 text-sm ml-auto"
                   >
                     {loading ? (
                       <>
-                        <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
                         <span>Analyzing...</span>
                       </>
                     ) : (
@@ -360,7 +378,7 @@ export default function Home() {
               </div>
             </form>
             
-            <p className="text-center text-xs text-gray-500 mt-3">
+            <p className="text-center text-[10px] text-gray-500 mt-2">
               Powered by Gemini 2.0 Flash • RAG with ChromaDB • 6 Usuli Framework
             </p>
           </div>
