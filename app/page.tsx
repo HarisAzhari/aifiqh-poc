@@ -9,25 +9,13 @@ interface Message {
   timestamp: Date
 }
 
-const frameworks = [
-  { id: "Taswīr", label: "Taswīr (تصوير)", subtitle: "Description" },
-  { id: "Taḥkīm", label: "Taḥkīm (تحكيم)", subtitle: "Ruling" },
-  { id: "Tadlīl", label: "Tadlīl (تدليل)", subtitle: "Evidence" },
-  { id: "Ta'līl", label: "Ta'līl (تعليل)", subtitle: "Reasoning" },
-  { id: "Tafri'", label: "Tafri' (تفريع)", subtitle: "Branching" },
-  { id: "Tamsīl", label: "Tamsīl (تمثيل)", subtitle: "Examples" }
-]
-
 export default function Home() {
   const [question, setQuestion] = useState('')
   const [messages, setMessages] = useState<Message[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>('')
   const [streamingContent, setStreamingContent] = useState('')
-  const [selectedFrameworks, setSelectedFrameworks] = useState<string[]>(
-    frameworks.map(f => f.id) // All enabled by default
-  )
-  const [isFrameworkDropdownOpen, setIsFrameworkDropdownOpen] = useState(false)
+  const [scholarAnalysis, setScholarAnalysis] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
 
   const scrollToBottom = () => {
@@ -37,16 +25,6 @@ export default function Home() {
   useEffect(() => {
     scrollToBottom()
   }, [messages, streamingContent])
-
-  const toggleFramework = (frameworkId: string) => {
-    setSelectedFrameworks(prev => {
-      if (prev.includes(frameworkId)) {
-        return prev.filter(id => id !== frameworkId)
-      } else {
-        return [...prev, frameworkId]
-      }
-    })
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -71,16 +49,14 @@ export default function Home() {
     setStreamingContent('')
 
     try {
-      // Build payload - only include frameworks if any are selected
-      const payload: { question: string; frameworks?: string[] } = { 
-        question: question 
+      // Build payload with scholar_analysis parameter
+      const payload = { 
+        question: question,
+        scholar_analysis: scholarAnalysis,
+        enable_functions: true
       }
       
-      if (selectedFrameworks.length > 0) {
-        payload.frameworks = selectedFrameworks
-      }
-      
-      const response = await fetch('https://ai-server.aifiqh.com/ai-fiqh-scholar/generate', {
+      const response = await fetch('http://127.0.0.1:5050/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -126,51 +102,49 @@ export default function Home() {
   }
 
   const suggestedQuestions = [
-    "What is the ruling on cryptocurrency according to the four mazahib?",
-    "Explain the conditions of wudu in each mazhab",
-    "What are the differences in prayer times between the mazahib?",
-    "How do the four schools view interest-based transactions?"
+    "What are the benefits of artificial intelligence?",
+    "Explain quantum computing in simple terms",
+    "How does blockchain technology work?",
+    "What is the future of renewable energy?"
   ]
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50">
+    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-emerald-200 sticky top-0 z-10 shadow-sm">
+      <header className="bg-white/80 backdrop-blur-sm border-b border-blue-200 sticky top-0 z-10 shadow-sm">
         <div className="max-w-6xl mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-emerald-800 flex items-center gap-3">
-                <span className="text-4xl">🕌</span>
-                <span>AI Fiqh Scholar</span>
+              <h1 className="text-3xl font-bold text-blue-800 flex items-center gap-3">
+                <span className="text-4xl">🤖</span>
+                <span>AI Assistant</span>
               </h1>
-              <p className="text-sm text-emerald-600 mt-1">
-                6 Usuli Framework • 4 Mazahib Analysis
+              <p className="text-sm text-blue-600 mt-1">
+                Powered by Advanced AI • Smart & Helpful
               </p>
             </div>
             <div className="text-right">
               <div className="flex gap-2 text-xs">
-                <span className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full font-medium">Hanafi</span>
-                <span className="px-3 py-1 bg-teal-100 text-teal-700 rounded-full font-medium">Maliki</span>
-                <span className="px-3 py-1 bg-cyan-100 text-cyan-700 rounded-full font-medium">Shafi&apos;i</span>
-                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">Hanbali</span>
+                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">Fast</span>
+                <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full font-medium">Accurate</span>
+                <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full font-medium">Helpful</span>
               </div>
             </div>
           </div>
         </div>
       </header>
 
-      <div className="max-w-6xl mx-auto px-4 py-4">
+      <div className="max-w-6xl mx-auto px-6 py-8">
         {/* Chat Messages */}
-        <div className="pb-64">
+        <div className="pb-96">
           {messages.length === 0 && !streamingContent && (
             <div className="text-center py-16">
-              <div className="text-8xl mb-6">📚</div>
+              <div className="text-8xl mb-6">💬</div>
               <h2 className="text-3xl font-bold text-gray-800 mb-4">
-                Ask Your Fiqh Question
+                How can I help you today?
               </h2>
               <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
-                Get comprehensive answers using the 6 Usuli Framework across all four major Mazahib
-                with authentic source citations from classical texts
+                Ask me anything! I&apos;m here to provide helpful, accurate answers to your questions
               </p>
               
               {/* Suggested Questions */}
@@ -181,9 +155,9 @@ export default function Home() {
                     <button
                       key={idx}
                       onClick={() => setQuestion(q)}
-                      className="p-4 bg-white border-2 border-emerald-200 rounded-xl text-left hover:border-emerald-400 hover:shadow-md transition text-sm text-gray-700 group"
+                      className="p-4 bg-white border-2 border-blue-200 rounded-xl text-left hover:border-blue-400 hover:shadow-md transition text-sm text-gray-700 group"
                     >
-                      <span className="text-emerald-600 mr-2 group-hover:scale-110 inline-block transition">💡</span>
+                      <span className="text-blue-600 mr-2 group-hover:scale-110 inline-block transition">💡</span>
                       {q}
                     </button>
                   ))}
@@ -202,22 +176,22 @@ export default function Home() {
                 <div
                   className={`max-w-4xl ${
                     message.role === 'user'
-                      ? 'bg-emerald-600 text-white rounded-2xl rounded-br-sm'
+                      ? 'bg-blue-600 text-white rounded-2xl rounded-br-sm'
                       : 'bg-white border-2 border-gray-200 rounded-2xl rounded-tl-sm'
                   } p-6 shadow-lg`}
                 >
                   {message.role === 'user' ? (
                     <div>
-                      <p className="font-semibold mb-2 text-emerald-100 text-sm">Your Question</p>
+                      <p className="font-semibold mb-2 text-blue-100 text-sm">You</p>
                       <p className="text-lg leading-relaxed">{message.content}</p>
                     </div>
                   ) : (
-                    <div className="prose prose-emerald max-w-none">
+                    <div className="prose prose-blue max-w-none">
                       <div className="flex items-center gap-2 mb-4">
-                        <span className="text-2xl">🎓</span>
-                        <span className="font-bold text-emerald-800">Scholar Response</span>
+                        <span className="text-2xl">🤖</span>
+                        <span className="font-bold text-blue-800">AI Assistant</span>
                       </div>
-                      <div className="text-gray-800 whitespace-pre-wrap font-serif leading-relaxed">
+                      <div className="text-gray-800 whitespace-pre-wrap leading-relaxed">
                         {message.content}
                       </div>
                     </div>
@@ -229,18 +203,18 @@ export default function Home() {
             {/* Streaming Response */}
             {streamingContent && (
               <div className="flex justify-start">
-                <div className="max-w-4xl bg-white border-2 border-emerald-200 rounded-2xl rounded-tl-sm p-6 shadow-lg">
-                  <div className="prose prose-emerald max-w-none">
+                <div className="max-w-4xl bg-white border-2 border-blue-200 rounded-2xl rounded-tl-sm p-6 shadow-lg">
+                  <div className="prose prose-blue max-w-none">
                     <div className="flex items-center gap-2 mb-4">
-                      <span className="text-2xl">🎓</span>
-                      <span className="font-bold text-emerald-800">Scholar Response</span>
+                      <span className="text-2xl">🤖</span>
+                      <span className="font-bold text-blue-800">AI Assistant</span>
                       <div className="ml-2 flex gap-1">
-                        <span className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce"></span>
-                        <span className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></span>
-                        <span className="w-2 h-2 bg-emerald-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                        <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></span>
+                        <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></span>
+                        <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
                       </div>
                     </div>
-                    <div className="text-gray-800 whitespace-pre-wrap font-serif leading-relaxed">
+                    <div className="text-gray-800 whitespace-pre-wrap leading-relaxed">
                       {streamingContent}
                     </div>
                   </div>
@@ -253,8 +227,8 @@ export default function Home() {
         </div>
 
         {/* Input Area - Fixed at bottom */}
-        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent pb-3 pt-4">
-          <div className="max-w-4xl mx-auto px-4">
+        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent pb-6 pt-8">
+          <div className="max-w-4xl mx-auto px-6">
             {error && (
               <div className="mb-4 bg-red-50 border-2 border-red-300 text-red-700 px-4 py-3 rounded-xl">
                 <p className="font-semibold">Error:</p>
@@ -263,88 +237,45 @@ export default function Home() {
             )}
 
             <form onSubmit={handleSubmit} className="relative">
-              <div className="bg-white rounded-2xl shadow-2xl border-2 border-emerald-200 focus-within:border-emerald-400 transition">
-                {/* Framework Toggles - Dropdown */}
-                <div className="border-b border-gray-100">
-                  <button
-                    type="button"
-                    onClick={() => setIsFrameworkDropdownOpen(!isFrameworkDropdownOpen)}
-                    className="w-full px-4 py-2.5 flex items-center justify-between hover:bg-gray-50 transition"
-                  >
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm">📚</span>
-                      <span className="text-xs font-semibold text-gray-700">Usuli Framework Selection</span>
-                      <span className="text-[10px] text-gray-500 bg-emerald-50 px-2 py-0.5 rounded-full">
-                        {selectedFrameworks.length} of 6
-                      </span>
-                    </div>
-                    <svg 
-                      className={`w-4 h-4 text-gray-500 transition-transform ${isFrameworkDropdownOpen ? 'rotate-180' : ''}`}
-                      fill="none" 
-                      viewBox="0 0 24 24" 
-                      stroke="currentColor"
+              <div className="bg-white rounded-2xl shadow-2xl border-2 border-blue-200 focus-within:border-blue-400 transition">
+                {/* Scholar Analysis Toggle */}
+                <div className="px-6 pt-4 pb-3 border-b border-gray-100">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                      <span>🎓</span>
+                      <span>Scholar Analysis Mode</span>
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setScholarAnalysis(!scholarAnalysis)}
+                      disabled={loading}
+                      className={`
+                        relative inline-flex h-6 w-11 items-center rounded-full transition-colors
+                        ${scholarAnalysis ? 'bg-blue-600' : 'bg-gray-300'}
+                        ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
+                      `}
                     >
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                    </svg>
-                  </button>
-                  
-                  {isFrameworkDropdownOpen && (
-                    <div className="px-4 pb-3 max-h-[30vh] overflow-y-auto">
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-1.5">
-                        {frameworks.map((framework) => {
-                          const isSelected = selectedFrameworks.includes(framework.id)
-                          return (
-                            <button
-                              key={framework.id}
-                              type="button"
-                              onClick={() => toggleFramework(framework.id)}
-                              disabled={loading}
-                              className={`
-                                px-2 py-1.5 rounded-md border transition-all text-left text-xs
-                                ${isSelected 
-                                  ? 'bg-emerald-50 border-emerald-500 text-emerald-800 shadow-sm' 
-                                  : 'bg-gray-50 border-gray-200 text-gray-500 hover:border-gray-300'
-                                }
-                                ${loading ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md cursor-pointer'}
-                              `}
-                            >
-                              <div className="flex items-center gap-1.5">
-                                <div className={`
-                                  w-3 h-3 rounded border flex items-center justify-center transition-all flex-shrink-0
-                                  ${isSelected 
-                                    ? 'bg-emerald-500 border-emerald-500' 
-                                    : 'bg-white border-gray-300'
-                                  }
-                                `}>
-                                  {isSelected && (
-                                    <svg className="w-2 h-2 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                    </svg>
-                                  )}
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className={`font-semibold truncate text-[11px] ${isSelected ? 'text-emerald-800' : 'text-gray-600'}`}>
-                                    {framework.id}
-                                  </div>
-                                  <div className={`text-[9px] ${isSelected ? 'text-emerald-600' : 'text-gray-400'}`}>
-                                    {framework.subtitle}
-                                  </div>
-                                </div>
-                              </div>
-                            </button>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
+                      <span
+                        className={`
+                          inline-block h-4 w-4 transform rounded-full bg-white transition-transform
+                          ${scholarAnalysis ? 'translate-x-6' : 'translate-x-1'}
+                        `}
+                      />
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">
+                    {scholarAnalysis 
+                      ? '✓ Using 6-framework deep analysis' 
+                      : 'Simple response mode'}
+                  </p>
                 </div>
                 
                 <textarea
                   value={question}
                   onChange={(e) => setQuestion(e.target.value)}
-                  placeholder="Ask a fiqh question... (e.g., What is the ruling on digital currencies?)"
-                  className="w-full px-4 py-3 rounded-2xl resize-none focus:outline-none text-gray-800 placeholder-gray-400 text-sm"
-                  rows={2}
+                  placeholder="Ask me anything..."
+                  className="w-full px-6 py-4 rounded-2xl resize-none focus:outline-none text-gray-800 placeholder-gray-400"
+                  rows={3}
                   disabled={loading}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && !e.shiftKey) {
@@ -353,24 +284,24 @@ export default function Home() {
                     }
                   }}
                 />
-                <div className="flex items-center justify-between px-4 pb-3">
-                  <div className="text-[10px] text-gray-500 hidden sm:block">
-                    Press <kbd className="px-1.5 py-0.5 bg-gray-100 rounded border border-gray-300 text-[9px]">Enter</kbd> to send
+                <div className="flex items-center justify-between px-6 pb-4">
+                  <div className="text-xs text-gray-500">
+                    Press <kbd className="px-2 py-1 bg-gray-100 rounded border border-gray-300">Enter</kbd> to send, <kbd className="px-2 py-1 bg-gray-100 rounded border border-gray-300">Shift + Enter</kbd> for new line
                   </div>
                   <button
                     type="submit"
                     disabled={!question.trim() || loading}
-                    className="bg-emerald-600 text-white px-6 py-2 rounded-lg font-semibold hover:bg-emerald-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition shadow-lg flex items-center gap-2 text-sm ml-auto"
+                    className="bg-blue-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition shadow-lg flex items-center gap-2"
                   >
                     {loading ? (
                       <>
-                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                        <span>Analyzing...</span>
+                        <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
+                        <span>Thinking...</span>
                       </>
                     ) : (
                       <>
-                        <span>Ask Scholar</span>
-                        <span>📖</span>
+                        <span>Send</span>
+                        <span>✨</span>
                       </>
                     )}
                   </button>
@@ -378,8 +309,8 @@ export default function Home() {
               </div>
             </form>
             
-            <p className="text-center text-[10px] text-gray-500 mt-2">
-              Powered by Gemini 2.0 Flash • RAG with ChromaDB • 6 Usuli Framework
+            <p className="text-center text-xs text-gray-500 mt-3">
+              Powered by Gemini 2.0 Flash • RAG with ChromaDB
             </p>
           </div>
         </div>
