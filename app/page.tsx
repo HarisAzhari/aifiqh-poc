@@ -56,7 +56,7 @@ export default function Home() {
         enable_functions: true
       }
       
-      const response = await fetch('http://127.0.0.1:5050/generate', {
+      const response = await fetch('https://ai-server-staging.aifiqh.com/ai-fiqh-scholar/generate', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
