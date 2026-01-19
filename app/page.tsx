@@ -1,320 +1,285 @@
-'use client'
+'use client';
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react';
 
 interface Message {
-  id: string
-  role: 'user' | 'assistant'
-  content: string
-  timestamp: Date
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
 }
 
 export default function Home() {
-  const [question, setQuestion] = useState('')
-  const [messages, setMessages] = useState<Message[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string>('')
-  const [streamingContent, setStreamingContent] = useState('')
-  const [scholarAnalysis, setScholarAnalysis] = useState(false)
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [inputMessage, setInputMessage] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
+  // Auto-scroll to bottom when new messages arrive
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
   useEffect(() => {
-    scrollToBottom()
-  }, [messages, streamingContent])
+    scrollToBottom();
+  }, [messages]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    
-    if (!question.trim()) {
-      setError('Please enter a question')
-      return
-    }
+  // Focus input on mount
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
 
-    // Add user message
-    const userMessage: Message = {
-      id: Date.now().toString(),
+  const handleSendMessage = async () => {
+    if (!inputMessage.trim() || isLoading) return;
+
+    const userMessage = inputMessage.trim();
+    setInputMessage('');
+    setError('');
+
+    // Add user message to chat
+    const newUserMessage: Message = {
       role: 'user',
-      content: question,
-      timestamp: new Date()
-    }
-    
-    setMessages(prev => [...prev, userMessage])
-    setQuestion('')
-    setLoading(true)
-    setError('')
-    setStreamingContent('')
+      content: userMessage,
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, newUserMessage]);
+    setIsLoading(true);
 
     try {
-      // Build payload with scholar_analysis parameter
-      const payload = { 
-        question: question,
-        scholar_analysis: scholarAnalysis,
-        enable_functions: true
-      }
-      
-      const response = await fetch('https://ai-server-staging.aifiqh.com/ai-fiqh-scholar/generate', {
+      // Call Flask backend
+      const response = await fetch('https://api.moometrics.io/data/generate-contract', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(payload)
-      })
+        body: JSON.stringify({ message: userMessage }),
+      });
 
       if (!response.ok) {
-        throw new Error('Failed to connect to API')
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to get response from AI');
       }
 
-      const reader = response.body?.getReader()
-      const decoder = new TextDecoder()
-      let fullResponse = ''
+      const data = await response.json();
+      const aiResponse: Message = {
+        role: 'assistant',
+        content: data.response,
+        timestamp: new Date(),
+      };
 
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read()
-          if (done) break
-          
-          const chunk = decoder.decode(value, { stream: true })
-          fullResponse += chunk
-          setStreamingContent(fullResponse)
-        }
-
-        // Add assistant message
-        const assistantMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          role: 'assistant',
-          content: fullResponse,
-          timestamp: new Date()
-        }
-        
-        setMessages(prev => [...prev, assistantMessage])
-        setStreamingContent('')
-      }
+      setMessages((prev) => [...prev, aiResponse]);
     } catch (err) {
-      setError('Failed to connect to API. Make sure Flask server is running on port 5050')
-      console.error(err)
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      // Add error message to chat
+      const errorMessage: Message = {
+        role: 'assistant',
+        content: '❌ Sorry, I encountered an error. Please try again.',
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
-      setLoading(false)
+      setIsLoading(false);
+      inputRef.current?.focus();
     }
-  }
+  };
 
-  const suggestedQuestions = [
-    "What are the benefits of artificial intelligence?",
-    "Explain quantum computing in simple terms",
-    "How does blockchain technology work?",
-    "What is the future of renewable energy?"
-  ]
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+    <div className="min-h-screen bg-linear-to-br from-purple-50 via-white to-blue-50 dark:from-gray-900 dark:via-gray-800 dark:to-purple-950 flex flex-col">
       {/* Header */}
-      <header className="bg-white/80 backdrop-blur-sm border-b border-blue-200 sticky top-0 z-10 shadow-sm">
-        <div className="max-w-6xl mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
+      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-700 shadow-sm sticky top-0 z-10">
+        <div className="container mx-auto px-4 py-4 max-w-4xl">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center justify-center w-12 h-12 bg-linear-to-br from-purple-500 to-blue-600 rounded-xl shadow-lg">
+              <span className="text-2xl">🤖</span>
+            </div>
             <div>
-              <h1 className="text-3xl font-bold text-blue-800 flex items-center gap-3">
-                <span className="text-4xl">🤖</span>
-                <span>AI Assistant</span>
+              <h1 className="text-2xl font-bold bg-linear-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                AI Chatbot
               </h1>
-              <p className="text-sm text-blue-600 mt-1">
-                Powered by Advanced AI • Smart & Helpful
+              <p className="text-sm text-gray-600 dark:text-gray-400">
+                Ask me anything about the PDF document
               </p>
             </div>
-            <div className="text-right">
-              <div className="flex gap-2 text-xs">
-                <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full font-medium">Fast</span>
-                <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full font-medium">Accurate</span>
-                <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full font-medium">Helpful</span>
-              </div>
-            </div>
-          </div>
-        </div>
-      </header>
-
-      <div className="max-w-6xl mx-auto px-6 py-8">
-        {/* Chat Messages */}
-        <div className="pb-96">
-          {messages.length === 0 && !streamingContent && (
-            <div className="text-center py-16">
-              <div className="text-8xl mb-6">💬</div>
-              <h2 className="text-3xl font-bold text-gray-800 mb-4">
-                How can I help you today?
-              </h2>
-              <p className="text-gray-600 mb-8 max-w-2xl mx-auto">
-                Ask me anything! I&apos;m here to provide helpful, accurate answers to your questions
-              </p>
-              
-              {/* Suggested Questions */}
-              <div className="max-w-3xl mx-auto">
-                <p className="text-sm text-gray-500 mb-4 font-medium">Suggested Questions:</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  {suggestedQuestions.map((q, idx) => (
-                    <button
-                      key={idx}
-                      onClick={() => setQuestion(q)}
-                      className="p-4 bg-white border-2 border-blue-200 rounded-xl text-left hover:border-blue-400 hover:shadow-md transition text-sm text-gray-700 group"
-                    >
-                      <span className="text-blue-600 mr-2 group-hover:scale-110 inline-block transition">💡</span>
-                      {q}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Message List */}
-          <div className="space-y-6">
-            {messages.map((message) => (
-              <div
-                key={message.id}
-                className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
-              >
-                <div
-                  className={`max-w-4xl ${
-                    message.role === 'user'
-                      ? 'bg-blue-600 text-white rounded-2xl rounded-br-sm'
-                      : 'bg-white border-2 border-gray-200 rounded-2xl rounded-tl-sm'
-                  } p-6 shadow-lg`}
-                >
-                  {message.role === 'user' ? (
-                    <div>
-                      <p className="font-semibold mb-2 text-blue-100 text-sm">You</p>
-                      <p className="text-lg leading-relaxed">{message.content}</p>
-                    </div>
-                  ) : (
-                    <div className="prose prose-blue max-w-none">
-                      <div className="flex items-center gap-2 mb-4">
-                        <span className="text-2xl">🤖</span>
-                        <span className="font-bold text-blue-800">AI Assistant</span>
-                      </div>
-                      <div className="text-gray-800 whitespace-pre-wrap leading-relaxed">
-                        {message.content}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-
-            {/* Streaming Response */}
-            {streamingContent && (
-              <div className="flex justify-start">
-                <div className="max-w-4xl bg-white border-2 border-blue-200 rounded-2xl rounded-tl-sm p-6 shadow-lg">
-                  <div className="prose prose-blue max-w-none">
-                    <div className="flex items-center gap-2 mb-4">
-                      <span className="text-2xl">🤖</span>
-                      <span className="font-bold text-blue-800">AI Assistant</span>
-                      <div className="ml-2 flex gap-1">
-                        <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce"></span>
-                        <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></span>
-                        <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
-                      </div>
-                    </div>
-                    <div className="text-gray-800 whitespace-pre-wrap leading-relaxed">
-                      {streamingContent}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div ref={messagesEndRef} />
-          </div>
-        </div>
-
-        {/* Input Area - Fixed at bottom */}
-        <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-white via-white to-transparent pb-6 pt-8">
-          <div className="max-w-4xl mx-auto px-6">
-            {error && (
-              <div className="mb-4 bg-red-50 border-2 border-red-300 text-red-700 px-4 py-3 rounded-xl">
-                <p className="font-semibold">Error:</p>
-                <p>{error}</p>
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="relative">
-              <div className="bg-white rounded-2xl shadow-2xl border-2 border-blue-200 focus-within:border-blue-400 transition">
-                {/* Scholar Analysis Toggle */}
-                <div className="px-6 pt-4 pb-3 border-b border-gray-100">
-                  <div className="flex items-center justify-between">
-                    <label className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                      <span>🎓</span>
-                      <span>Scholar Analysis Mode</span>
-                    </label>
-                    <button
-                      type="button"
-                      onClick={() => setScholarAnalysis(!scholarAnalysis)}
-                      disabled={loading}
-                      className={`
-                        relative inline-flex h-6 w-11 items-center rounded-full transition-colors
-                        ${scholarAnalysis ? 'bg-blue-600' : 'bg-gray-300'}
-                        ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
-                      `}
-                    >
-                      <span
-                        className={`
-                          inline-block h-4 w-4 transform rounded-full bg-white transition-transform
-                          ${scholarAnalysis ? 'translate-x-6' : 'translate-x-1'}
-                        `}
-                      />
-                    </button>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">
-                    {scholarAnalysis 
-                      ? '✓ Using 6-framework deep analysis' 
-                      : 'Simple response mode'}
-                  </p>
-                </div>
-                
-                <textarea
-                  value={question}
-                  onChange={(e) => setQuestion(e.target.value)}
-                  placeholder="Ask me anything..."
-                  className="w-full px-6 py-4 rounded-2xl resize-none focus:outline-none text-gray-800 placeholder-gray-400"
-                  rows={3}
-                  disabled={loading}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && !e.shiftKey) {
-                      e.preventDefault()
-                      handleSubmit(e)
-                    }
-                  }}
-                />
-                <div className="flex items-center justify-between px-6 pb-4">
-                  <div className="text-xs text-gray-500">
-                    Press <kbd className="px-2 py-1 bg-gray-100 rounded border border-gray-300">Enter</kbd> to send, <kbd className="px-2 py-1 bg-gray-100 rounded border border-gray-300">Shift + Enter</kbd> for new line
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={!question.trim() || loading}
-                    className="bg-blue-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition shadow-lg flex items-center gap-2"
-                  >
-                    {loading ? (
-                      <>
-                        <div className="animate-spin h-5 w-5 border-2 border-white border-t-transparent rounded-full"></div>
-                        <span>Thinking...</span>
-                      </>
-                    ) : (
-                      <>
-                        <span>Send</span>
-                        <span>✨</span>
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-            </form>
-            
-            <p className="text-center text-xs text-gray-500 mt-3">
-              Powered by Gemini 2.0 Flash • RAG with ChromaDB
-            </p>
           </div>
         </div>
       </div>
-    </main>
-  )
+
+      {/* Chat Messages */}
+      <div className="flex-1 overflow-y-auto">
+        <div className="container mx-auto px-4 py-6 max-w-4xl">
+          {messages.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center space-y-6">
+              <div className="text-8xl animate-pulse">💬</div>
+              <div className="space-y-2">
+                <h2 className="text-2xl font-semibold text-gray-700 dark:text-gray-300">
+                  Start a Conversation
+                </h2>
+                <p className="text-gray-500 dark:text-gray-400 max-w-md">
+                  I&apos;m ready to answer your questions about the PDF document that was loaded when I started.
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-8">
+                {[
+                  '📄 What is this document about?',
+                  '💼 Tell me about the company',
+                  '📊 What are the key findings?',
+                  '🔍 Summarize the main points',
+                ].map((suggestion, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => setInputMessage(suggestion.slice(2).trim())}
+                    className="px-4 py-3 bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 hover:border-purple-400 dark:hover:border-purple-600 transition-all duration-200 text-sm text-gray-700 dark:text-gray-300 hover:shadow-md"
+                  >
+                    {suggestion}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-6">
+              {messages.map((message, idx) => (
+                <div
+                  key={idx}
+                  className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
+                >
+                  <div
+                    className={`flex items-start space-x-3 max-w-[80%] ${
+                      message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''
+                    }`}
+                  >
+                    {/* Avatar */}
+                    <div
+                      className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-xl ${
+                        message.role === 'user'
+                          ? 'bg-linear-to-br from-purple-500 to-blue-600'
+                          : 'bg-linear-to-br from-emerald-500 to-teal-600'
+                      }`}
+                    >
+                      {message.role === 'user' ? '👤' : '🤖'}
+                    </div>
+
+                    {/* Message Bubble */}
+                    <div
+                      className={`rounded-2xl px-5 py-3 shadow-md ${
+                        message.role === 'user'
+                          ? 'bg-linear-to-br from-purple-500 to-blue-600 text-white'
+                          : 'bg-white dark:bg-gray-800 text-gray-800 dark:text-gray-200 border border-gray-200 dark:border-gray-700'
+                      }`}
+                    >
+                      <div className="whitespace-pre-wrap wrap-break-word leading-relaxed">
+                        {message.content}
+                      </div>
+                      <div
+                        className={`text-xs mt-2 ${
+                          message.role === 'user'
+                            ? 'text-purple-100'
+                            : 'text-gray-500 dark:text-gray-400'
+                        }`}
+                      >
+                        {message.timestamp.toLocaleTimeString([], {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              {/* Loading Indicator */}
+              {isLoading && (
+                <div className="flex justify-start animate-fade-in">
+                  <div className="flex items-start space-x-3 max-w-[80%]">
+                    <div className="shrink-0 w-10 h-10 rounded-full bg-linear-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-xl">
+                      🤖
+                    </div>
+                    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-5 py-4 shadow-md">
+                      <div className="flex space-x-2">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <div ref={messagesEndRef} />
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Error Display */}
+      {error && (
+        <div className="container mx-auto px-4 max-w-4xl">
+          <div className="mb-4 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl text-red-600 dark:text-red-400 text-sm flex items-center space-x-2">
+            <span>⚠️</span>
+            <span>{error}</span>
+            <button
+              onClick={() => setError('')}
+              className="ml-auto text-red-400 hover:text-red-600"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Input Area */}
+      <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-sm border-t border-gray-200 dark:border-gray-700 sticky bottom-0">
+        <div className="container mx-auto px-4 py-4 max-w-4xl">
+          <div className="flex items-end space-x-3">
+            <div className="flex-1 relative">
+              <input
+                ref={inputRef}
+                type="text"
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                onKeyPress={handleKeyPress}
+                placeholder="Type your message..."
+                disabled={isLoading}
+                className="w-full px-5 py-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-2xl focus:outline-none focus:ring-2 focus:ring-purple-500 dark:focus:ring-purple-600 text-gray-800 dark:text-gray-200 placeholder-gray-400 dark:placeholder-gray-500 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm transition-all duration-200"
+              />
+            </div>
+            <button
+              onClick={handleSendMessage}
+              disabled={!inputMessage.trim() || isLoading}
+              className="px-6 py-4 bg-linear-to-r from-purple-500 to-blue-600 hover:from-purple-600 hover:to-blue-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed text-white font-semibold rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105 disabled:transform-none disabled:hover:shadow-lg flex items-center space-x-2"
+            >
+              <span>Send</span>
+              <span className="text-xl">🚀</span>
+            </button>
+          </div>
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+            Backend: http://localhost:5000/generate
+          </p>
+        </div>
+      </div>
+
+      <style jsx>{`
+        @keyframes fade-in {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fade-in {
+          animation: fade-in 0.3s ease-out;
+        }
+      `}</style>
+    </div>
+  );
 }
