@@ -12,6 +12,7 @@ export default function Home() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [streamingMessage, setStreamingMessage] = useState('');  // ✅ NEW: For streaming
   const [error, setError] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -23,7 +24,7 @@ export default function Home() {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [messages, streamingMessage]);  // ✅ Also scroll on streaming updates
 
   // Focus input on mount
   useEffect(() => {
@@ -45,10 +46,11 @@ export default function Home() {
     };
     setMessages((prev) => [...prev, newUserMessage]);
     setIsLoading(true);
+    setStreamingMessage('');  // ✅ Reset streaming message
 
     try {
-      // Call Flask backend
-      const response = await fetch('https://api.moometrics.io/data/generate-contract', {
+      // ✅ Call Flask backend with streaming
+      const response = await fetch('http://127.0.0.1:5001/generate-contract', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -57,18 +59,54 @@ export default function Home() {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to get response from AI');
+        throw new Error('Failed to get response from AI');
       }
 
-      const data = await response.json();
-      const aiResponse: Message = {
-        role: 'assistant',
-        content: data.response,
-        timestamp: new Date(),
-      };
+      // ✅ NEW: Handle streaming response
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let fullResponse = '';
 
-      setMessages((prev) => [...prev, aiResponse]);
+      if (reader) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          const chunk = decoder.decode(value);
+          const lines = chunk.split('\n');
+
+          for (const line of lines) {
+            if (line.startsWith('data: ')) {
+              const data = line.slice(6);
+              try {
+                const parsed = JSON.parse(data);
+                
+                if (parsed.error) {
+                  throw new Error(parsed.error);
+                }
+                
+                if (parsed.content) {
+                  fullResponse += parsed.content;
+                  setStreamingMessage(fullResponse);  // ✅ Update streaming display
+                }
+                
+                if (parsed.done) {
+                  // ✅ Streaming complete, add final message
+                  const aiResponse: Message = {
+                    role: 'assistant',
+                    content: fullResponse,
+                    timestamp: new Date(),
+                  };
+                  setMessages((prev) => [...prev, aiResponse]);
+                  setStreamingMessage('');  // ✅ Clear streaming message
+                }
+              } catch (e) {
+                // Skip invalid JSON
+              }
+            }
+          }
+        }
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An error occurred');
       // Add error message to chat
@@ -78,6 +116,7 @@ export default function Home() {
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, errorMessage]);
+      setStreamingMessage('');
     } finally {
       setIsLoading(false);
       inputRef.current?.focus();
@@ -115,7 +154,7 @@ export default function Home() {
       {/* Chat Messages */}
       <div className="flex-1 overflow-y-auto">
         <div className="container mx-auto px-4 py-6 max-w-4xl">
-          {messages.length === 0 ? (
+          {messages.length === 0 && !streamingMessage ? (
             <div className="flex flex-col items-center justify-center h-full min-h-[400px] text-center space-y-6">
               <div className="text-8xl animate-pulse">💬</div>
               <div className="space-y-2">
@@ -194,8 +233,25 @@ export default function Home() {
                 </div>
               ))}
 
-              {/* Loading Indicator */}
-              {isLoading && (
+              {/* ✅ NEW: Streaming Message Display */}
+              {streamingMessage && (
+                <div className="flex justify-start animate-fade-in">
+                  <div className="flex items-start space-x-3 max-w-[80%]">
+                    <div className="shrink-0 w-10 h-10 rounded-full bg-linear-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-xl">
+                      🤖
+                    </div>
+                    <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-2xl px-5 py-3 shadow-md">
+                      <div className="whitespace-pre-wrap wrap-break-word leading-relaxed text-gray-800 dark:text-gray-200">
+                        {streamingMessage}
+                        <span className="inline-block w-1 h-4 bg-emerald-500 ml-1 animate-pulse"></span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Loading Indicator (only show before streaming starts) */}
+              {isLoading && !streamingMessage && (
                 <div className="flex justify-start animate-fade-in">
                   <div className="flex items-start space-x-3 max-w-[80%]">
                     <div className="shrink-0 w-10 h-10 rounded-full bg-linear-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-xl">
@@ -260,7 +316,7 @@ export default function Home() {
             </button>
           </div>
           <p className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
-            Backend: http://localhost:5000/generate
+            Backend: http://127.0.0.1:5001/generate-contract ✨ Streaming
           </p>
         </div>
       </div>
