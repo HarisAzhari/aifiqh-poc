@@ -50,7 +50,7 @@ export default function Home() {
 
     try {
       // ✅ Call Flask backend with streaming
-      const response = await fetch('http://127.0.0.1:5001/generate-contract', {
+      const response = await fetch('https://api.moometrics.io/data/generate-contract', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
